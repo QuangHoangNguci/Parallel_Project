@@ -1,0 +1,21 @@
+{
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "Build MPI Program",
+            "type": "shell",
+            "command": "/usr/bin/mpicc",
+            "args": [
+                "-g",
+                "${workspaceFolder}/QUICKSORT/quick-sort.c",
+                "-o",
+                "${workspaceFolder}/QUICKSORT/quick-sort"
+            ],
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            },
+            "problemMatcher": ["$gcc"]
+        }
+    ]
+}

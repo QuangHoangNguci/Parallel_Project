@@ -1,0 +1,34 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Launch MPI Program",
+            "type": "cppdbg",
+            "request": "launch",
+            "program": "${workspaceFolder}/QUICKSORT/quick-sort",  // Đường dẫn đến chương trình của bạn
+            "args": [
+                "-np", "4", "${workspaceFolder}/QUICKSORT/quick-sort"  // Chạy với 4 tiến trình
+            ],
+            "stopAtEntry": false,
+            "cwd": "${workspaceFolder}",
+            "environment": [],
+            "externalConsole": false,
+            "MIMode": "gdb",
+            "miDebuggerPath": "/usr/bin/gdb",
+            "setupCommands": [
+                {
+                    "description": "Enable pretty-printing for gdb",
+                    "text": "-enable-pretty-printing",
+                    "ignoreFailures": true
+                }
+            ],
+            "preLaunchTask": "Build MPI Program",
+            "miDebuggerArgs": "",
+            //"console": "integratedTerminal",
+            "postDebugTask": "Clean MPI Program",
+            "sourceFileMap": {
+                "/mnt/c": "C:\\"
+            }
+        }
+    ]
+}
