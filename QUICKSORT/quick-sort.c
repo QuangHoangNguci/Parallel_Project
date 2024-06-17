@@ -4,10 +4,10 @@
 #include <time.h>
 #include <unistd.h>
 
-// Funtion to generate input to input.txt
+// Function to generate input to input.txt
 void genInput()
 {
-        FILE *file;
+    FILE *file;
     int num_elements = 10000;
     int i;
     int random_number;
@@ -36,10 +36,45 @@ void genInput()
     printf("Input file generated successfully.\n");
 }
 
-//
-void appendResultToCsv()
+// Function to append the sorted result to result.csv
+void appendResultToCsv(int* arr, int size, double time_taken)
 {
+    FILE *file;
 
+    // Open the CSV file in append mode
+    file = fopen("result.csv", "a");
+    if (file == NULL)
+    {
+        printf("Error opening file!\n");
+        return;
+    }
+
+    // Get the current timestamp
+    time_t now;
+    time(&now);
+    struct tm *local = localtime(&now);
+
+    // Write the current date and time
+    fprintf(file, "%04d-%02d-%02d %02d:%02d:%02d, ", local->tm_year + 1900, local->tm_mon + 1, local->tm_mday, local->tm_hour, local->tm_min, local->tm_sec);
+
+    // Write the time taken for sorting
+    fprintf(file, "%f, ", time_taken);
+
+    // Write the sorted array to the CSV file
+    for (int i = 0; i < size; i++)
+    {
+        fprintf(file, "%d", arr[i]);
+        if (i < size - 1)
+        {
+            fprintf(file, ", ");
+        }
+    }
+    fprintf(file, "\n");
+
+    // Close the file
+    fclose(file);
+
+    printf("Result appended to result.csv successfully.\n");
 }
 
 // Function to swap two numbers
@@ -336,6 +371,9 @@ int main(int argc, char* argv[])
             "\n\nQuicksort %d ints on %d procs: %f secs\n",
             number_of_elements, number_of_process,
             time_taken);
+
+        // Append the sorted result to CSV
+        appendResultToCsv(chunk, own_chunk_size, time_taken);
     }
 
     MPI_Finalize();
