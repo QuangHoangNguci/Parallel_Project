@@ -7,7 +7,33 @@
 // Funtion to generate input to input.txt
 void genInput()
 {
-    
+        FILE *file;
+    int num_elements = 10000;
+    int i;
+    int random_number;
+
+    // Open the file in write mode, which will clear the file if it exists
+    file = fopen("input.txt", "w");
+    if (file == NULL)
+    {
+        printf("Error opening file!\n");
+        return;
+    }
+
+    // Seed the random number generator
+    srand(time(NULL));
+
+    // Generate random numbers and write to file
+    for (i = 0; i < num_elements; i++)
+    {
+        random_number = rand();
+        fprintf(file, "%d ", random_number);
+    }
+
+    // Close the file
+    fclose(file);
+
+    printf("Input file generated successfully.\n");
 }
 
 //
