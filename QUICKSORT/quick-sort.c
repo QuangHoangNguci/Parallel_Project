@@ -166,7 +166,7 @@ int main(int argc, char* argv[])
     int chunk_size, own_chunk_size;
     int* chunk;
     FILE* file = NULL;
-    double time_taken;
+    double total_time, comm_time, sort_time;
     MPI_Status status;
 
     if (argc != 3) {
@@ -191,6 +191,8 @@ int main(int argc, char* argv[])
 
     MPI_Comm_size(MPI_COMM_WORLD, &number_of_process);
     MPI_Comm_rank(MPI_COMM_WORLD, &rank_of_process);
+
+    total_time = MPI_Wtime();
 
     if (rank_of_process == 0) {
         // Opening the file
@@ -248,8 +250,7 @@ int main(int argc, char* argv[])
     // Blocks all process until reach this point
     MPI_Barrier(MPI_COMM_WORLD);
 
-    // Starts Timer
-    time_taken -= MPI_Wtime();
+    comm_time = MPI_Wtime();
 
     // BroadCast the Size to all the
     // process from root process
@@ -272,6 +273,10 @@ int main(int argc, char* argv[])
                 chunk_size, MPI_INT, 0, MPI_COMM_WORLD);
     free(data);
     data = NULL;
+
+    comm_time = MPI_Wtime() - comm_time;
+
+    sort_time = MPI_Wtime();
 
     // Compute size of own chunk and
     // then sort them
@@ -324,8 +329,9 @@ int main(int argc, char* argv[])
         }
     }
 
-    // Stop the timer
-    time_taken += MPI_Wtime();
+    sort_time = MPI_Wtime() - sort_time;
+
+    total_time = MPI_Wtime() - total_time;
 
     // Opening the other file as taken form input
     // and writing it to the file and giving it
@@ -370,10 +376,13 @@ int main(int argc, char* argv[])
         printf(
             "\n\nQuicksort %d ints on %d procs: %f secs\n",
             number_of_elements, number_of_process,
-            time_taken);
+            total_time);
+
+        printf("Time spent in communication: %f secs\n", comm_time);
+        printf("Time spent in sorting: %f secs\n", sort_time);
 
         // Append the sorted result to CSV
-        appendResultToCsv(chunk, own_chunk_size, time_taken);
+        appendResultToCsv(chunk, own_chunk_size, total_time);
     }
 
     MPI_Finalize();
