@@ -8,7 +8,7 @@
 void genInput()
 {
     FILE *file;
-    int num_elements = 10000;
+    int num_elements = 1000000;
     int i;
     int random_number;
 
@@ -23,6 +23,7 @@ void genInput()
     // Seed the random number generator
     srand(time(NULL));
 
+    fprintf(file, "%d ", num_elements);
     // Generate random numbers and write to file
     for (i = 0; i < num_elements; i++)
     {
@@ -37,7 +38,7 @@ void genInput()
 }
 
 // Function to append the sorted result to result.csv
-void appendResultToCsv(int* arr, int size, double time_taken)
+void appendResultToCsv(int input_size, int num_threads, double T_w_com, double T_wo_com)
 {
     FILE *file;
 
@@ -49,27 +50,8 @@ void appendResultToCsv(int* arr, int size, double time_taken)
         return;
     }
 
-    // Get the current timestamp
-    time_t now;
-    time(&now);
-    struct tm *local = localtime(&now);
-
-    // Write the current date and time
-    fprintf(file, "%04d-%02d-%02d %02d:%02d:%02d, ", local->tm_year + 1900, local->tm_mon + 1, local->tm_mday, local->tm_hour, local->tm_min, local->tm_sec);
-
-    // Write the time taken for sorting
-    fprintf(file, "%f, ", time_taken);
-
-    // Write the sorted array to the CSV file
-    for (int i = 0; i < size; i++)
-    {
-        fprintf(file, "%d", arr[i]);
-        if (i < size - 1)
-        {
-            fprintf(file, ", ");
-        }
-    }
-    fprintf(file, "\n");
+    // Write the input size, number of threads, and times
+    fprintf(file, "%d, %d, %f, %f\n", input_size, num_threads, T_w_com, T_wo_com);
 
     // Close the file
     fclose(file);
@@ -166,7 +148,7 @@ int main(int argc, char* argv[])
     int chunk_size, own_chunk_size;
     int* chunk;
     FILE* file = NULL;
-    double total_time, comm_time, sort_time;
+    double T_w_com, T_wo_com, comm_time, sort_time;
     MPI_Status status;
 
     if (argc != 3) {
@@ -192,7 +174,7 @@ int main(int argc, char* argv[])
     MPI_Comm_size(MPI_COMM_WORLD, &number_of_process);
     MPI_Comm_rank(MPI_COMM_WORLD, &rank_of_process);
 
-    total_time = MPI_Wtime();
+    T_w_com = MPI_Wtime();
 
     if (rank_of_process == 0) {
         // Opening the file
@@ -288,10 +270,11 @@ int main(int argc, char* argv[])
                          : (number_of_elements
                             - chunk_size * rank_of_process);
 
-    // Sorting array with quick sort for every
-    // chunk as called by process
     quicksort(chunk, 0, own_chunk_size);
 
+    // Creating step variables and
+    // iterate to solve using odd-even
+    // and comparision and merge step
     for (int step = 1; step < number_of_process;
          step = 2 * step) {
         if (rank_of_process % (2 * step) != 0) {
@@ -302,89 +285,63 @@ int main(int argc, char* argv[])
         }
 
         if (rank_of_process + step < number_of_process) {
-            int received_chunk_size
+            int received_size
                 = (number_of_elements
-                   >= chunk_size
-                          * (rank_of_process + 2 * step))
+                   >= chunk_size * (rank_of_process
+                                    + 2 * step))
                       ? (chunk_size * step)
                       : (number_of_elements
-                         - chunk_size
-                               * (rank_of_process + step));
-            int* chunk_received;
-            chunk_received = (int*)malloc(
-                received_chunk_size * sizeof(int));
-            MPI_Recv(chunk_received, received_chunk_size,
+                         - chunk_size * (rank_of_process
+                                         + step));
+            int* chunk_received
+                = (int*)malloc(received_size
+                               * sizeof(int));
+            MPI_Recv(chunk_received, received_size,
                      MPI_INT, rank_of_process + step, 0,
                      MPI_COMM_WORLD, &status);
 
             data = merge(chunk, own_chunk_size,
                          chunk_received,
-                         received_chunk_size);
-
+                         received_size);
             free(chunk);
             free(chunk_received);
             chunk = data;
-            own_chunk_size
-                = own_chunk_size + received_chunk_size;
+            own_chunk_size = own_chunk_size
+                             + received_size;
         }
     }
 
     sort_time = MPI_Wtime() - sort_time;
 
-    total_time = MPI_Wtime() - total_time;
+    T_w_com = MPI_Wtime() - T_w_com;
+    T_wo_com = T_w_com - comm_time;
 
-    // Opening the other file as taken form input
-    // and writing it to the file and giving it
-    // as the output
+    // Printing the sorted array
     if (rank_of_process == 0) {
-        // Opening the file
-        file = fopen(argv[2], "w");
-
-        if (file == NULL) {
-            printf("Error in opening file... \n");
-            exit(-1);
-        }
-
-        // Printing total number of elements
-        // in the file
-        fprintf(
-            file,
-            "Total number of Elements in the array : %d\n",
-            own_chunk_size);
-
-        // Printing the value of array in the file
-        for (int i = 0; i < own_chunk_size; i++) {
-            fprintf(file, "%d ", chunk[i]);
-        }
-
-        // Closing the file
-        fclose(file);
-
-        printf("\n\n\n\nResult printed in output.txt file "
-               "and shown below: \n");
-
-        // For Printing in the terminal
-        printf("Total number of Elements given as input : "
-               "%d\n",
-               number_of_elements);
-        printf("Sorted array is: \n");
-
+        printf("Sorted Array is: \n");
         for (int i = 0; i < number_of_elements; i++) {
             printf("%d ", chunk[i]);
         }
+        printf("\n");
 
-        printf(
-            "\n\nQuicksort %d ints on %d procs: %f secs\n",
-            number_of_elements, number_of_process,
-            total_time);
+        // Writing into the Output file
+        file = fopen(argv[2], "w");
+        for (int i = 0; i < number_of_elements; i++) {
+            fprintf(file, "%d ", chunk[i]);
+        }
+        fclose(file);
+        appendResultToCsv(number_of_elements, number_of_process, T_w_com, T_wo_com);
 
-        printf("Time spent in communication: %f secs\n", comm_time);
-        printf("Time spent in sorting: %f secs\n", sort_time);
-
-        // Append the sorted result to CSV
-        appendResultToCsv(chunk, own_chunk_size, total_time);
+        // Logging the time taken for sorting with and without communication
+        printf("Total time with communication: %f seconds\n", T_w_com);
+        printf("Total time without communication: %f seconds\n", T_wo_com);
+        printf("Communication time: %f seconds\n", comm_time);
+        printf("Sorting time: %f seconds\n", sort_time);
     }
 
     MPI_Finalize();
+
+    // Deallocating Memory
+    free(chunk);
     return 0;
 }
